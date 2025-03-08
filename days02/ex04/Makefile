@@ -1,5 +1,11 @@
 all: 
-	make hex &&  make flash
+	make kill hex flash screen
+
+kill:
+	killall screen
+
+screen:
+	screen /dev/ttyUSB0 115200
 
 hex:
 	avr-gcc -Os -D F_CPU=16000000UL -mmcu=atmega328p -o  main.bin *.c && avr-objcopy -O ihex main.bin main.hex
