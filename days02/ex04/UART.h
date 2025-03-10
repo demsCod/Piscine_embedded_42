@@ -2,9 +2,9 @@
 #define UART_H
 
 #define BAUD 115200
+#define MYUBRR (F_CPU/ (16 * BAUD))
 #define BIT_SET(reg, target) reg |= (1 << target)
 #define BIT_RESET(reg) reg = 0
-#define MYUBRR (F_CPU/ (16 * BAUD))
 #define LEDS 23
 
 #include <util/delay.h>
