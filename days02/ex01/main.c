@@ -61,7 +61,7 @@ void uart_printstr(const char* str)
 }
 ISR (TIMER1_COMPA_vect)
 {
-   uart_printstr("Hello World!");
+   uart_printstr("Hello World!\r\n");
 }
 
 

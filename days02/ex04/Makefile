@@ -1,8 +1,7 @@
 all: 
-	make kill hex flash screen
+	make hex flash screen
 
-kill:
-	killall screen
+
 
 screen:
 	screen /dev/ttyUSB0 115200

@@ -4,7 +4,8 @@
 
 #define TIME_TARGET 15625  // 1 sec avec prescaler 1024
 #define BAUD 115200
-#define MYUBRR (F_CPU/ (16 * BAUD))
+#define F_CPU_ACTUAL (F_CPU / 256) // If you keep the /256 prescaler
+#define MYUBRR ((F_CPU_ACTUAL / (16 * BAUD)) - 1)
 
 #define BIT_RESET(reg)    ((reg) = 0)
 #define BIT_SET(reg, mask)    ((reg) |= (mask))
@@ -21,22 +22,16 @@ void uart_init()
 {
     UBRR0H = (unsigned char)(MYUBRR >> 8);
     UBRR0L = (unsigned char)MYUBRR;
-    /*ACTIVER LES TRANSMISSION*/
-    /*The USART transmitter is enabled by setting 
-    the transmit enable (TXEN) bit in the UCSRnB register. */
-    /*Enable receiver and transmitter */
     BIT_SET(UCSR0B, RXEN0);
     BIT_SET(UCSR0B, TXEN0);
-    BIT_SET(UCSR0B, RXCIE0); // enable interupt
-    /* Set frame format: 8data, 2stop bit */
-    UCSR0C = (1<<USBS0)|(3<<UCSZ00);
+    // BIT_SET(UCSR0B, RXCIE0); // enable interrupt
+    UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 }
 
 void uart_tx(unsigned char data)
 {
-    /* Wait for empty transmit buffer */
-    while (!(UCSR0A & (1<<UDRE0)))
-        ;
+    // Wait for empty transmit buffer
+    while (!(UCSR0A & (1 << UDRE0)));
     UDR0 = data;
 }
 
@@ -52,8 +47,8 @@ void uart_printstr(const char* str)
 
 char uart_rx(void)
 {
-    while ( !(UCSR0A & (1<<RXC0)) )
-        ;
+    // Wait for data to be received
+    while (!(UCSR0A & (1 << RXC0)));
     return UDR0;
 }
 
@@ -66,8 +61,8 @@ int whos_index( char *str, char c)
     i++;
     return i;
 }
-char hexa[] = {"0123456789abcdef"};
 
+char hexa[] = {"0123456789abcdef"};
 unsigned char	ft_atoi_hexa(char *str)
 {
 	unsigned char  num;
@@ -90,56 +85,57 @@ void set_rgb(uint8_t r, uint8_t g, uint8_t b)
     OCR0B = r;
     OCR2B = b;
 }
+
 void parse_input(char *input)
 {
-    
-    if (input[0] && input[0] != '#')
-    return;
-    int i = 1;
-    while (input[i])
-    {
-        if (whos_index(hexa, input[i]) > 16)
-                return;
-            i++;
-    }
-    if (i != 7)
+    if (input[0] != '#')
         return;
-    char red_str[2];
-    red_str[0] = input[1];
-    red_str[1] = input[2]; 
-    uint8_t  red_value = ft_atoi_hexa(red_str);
-    char green_str[3];
-    green_str[0] = input[3];
-    green_str[1] = input[4]; 
-    green_str[2] = '\0';
+    
+    // Check if we have exactly 7 characters (#RRGGBB)
+    int len = 0;
+    while (input[len])
+        len++;
+    
+    if (len != 7)
+        return;
+    
+    // Check if all characters after # are valid hex
+    for (int i = 1; i < 7; i++) {
+        char c = input[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+            return;
+    }
+    
+    char red_str[3] = {input[1], input[2], '\0'};
+    char green_str[3] = {input[3], input[4], '\0'};
+    char blue_str[3] = {input[5], input[6], '\0'};
+    
+    uint8_t red_value = ft_atoi_hexa(red_str);
     uint8_t green_value = ft_atoi_hexa(green_str);
-    char blue_str[3];
-    blue_str[0] = input[5];
-    blue_str[1] = input[6]; 
-    blue_str[2]  = '\0';
     uint8_t blue_value = ft_atoi_hexa(blue_str);
-    if (blue_value == 0 && green_value == 0)
-        PORTB ^= 23;
-    set_rgb(red_value, blue_value, green_value);
+    
+    set_rgb(red_value, green_value, blue_value);  // Make sure parameter order matches your LED wiring
 }
-
 int i = 0;
 char str[1024];
 
 void read_input()
 {
-    char c = uart_rx(); // Lire une seule fois
-    uart_tx(c);
-    PORTB ^= 23;
-    if (c != '\n' && c != '\r')
-        str[i++] = c;
-    else
-    {
-        str[i] = '\0';
-        parse_input(str);
-        str[0] = '\0';
+    if (UCSR0A & (1 << RXC0)) {  // Check if data is available
+        char c = uart_rx();
+        PORTB ^= 23;
+        
+        uart_tx(c);  // Echo back
+        if (c != '\n' && c != '\r') {
+            if (i < 1023) {  // Prevent buffer overflow
+                str[i++] = c;
+            }
+        } else {
+            str[i] = '\0';
+            parse_input(str);
+            i = 0;  // Reset index
+        }
     }
-
 }
 
 // TCCR0A COM0A1 COM0A0 COM0B1 COM0B0 – – WGM01 WGM00
@@ -147,23 +143,16 @@ void read_input()
 void init_rgb()
 {
     cli();
-   // CLKPR |= (1 << CLKPS3); // 256
-    TCCR0A |= (1 << WGM00) | (1 << WGM01);                 // Mode  Fast PWM
-    TCCR2A |= (1 << WGM20) | (1 << WGM21);                 // Mode  Fast PWM
+    CLKPR |= (1 << CLKPS3); // Prescaler  256
 
-    ///TCCR0B |= (1 << WGM02); // counting sequence OCRA
+    TCCR0A |= (1 << WGM00) | (1 << WGM01);                 // Mode  Fast PWM R0
+    TCCR2A |= (1 << WGM20) | (1 << WGM21);                 // Mode  Fast PWM R2
 
-    //Clear OC0B on compare match, set OC0B at BOTTOM, (non-inverting mode)
-    TCCR0A |= (1 << COM0B1) | (1 << COM0A1);    
-    
-    TCCR2A |= (1 << COM2B1);             
-    
+    TCCR0A |= (1 << COM0B1) | (1 << COM0A1);  // green and red 
+    TCCR2A |= (1 << COM2B1);    // blue
 
     TCCR0B |= (1 << CS01) | (1 << CS00);   // Prescaler 64
     TCCR2B |= (1 << CS22);  // Prescaler 64
-    //BIT_SET(TIMSK1, (1 << OCIE0B));        // Activation de l'interruption
-    //OCR0B = 255;
-    //OCR0A = 255;
     sei();
 }
 
@@ -173,44 +162,16 @@ void setup_led()
     BIT_SET(DDRD, LED_BLUE | LED_GREEN | LED_RED);      // Configure en sortie
 }
 
-/*ISR(TIMER1_COMPA_vect)
-{
-    static uint8_t color_table[7] = {LED_RED, LED_GREEN, LED_BLUE, LED_YELLOW , LED_CYAN , LED_PINK , LED_WHITE};
-    static uint8_t i = 0;
-
-    BIT_CLEAR(PORTD, LED_BLUE | LED_GREEN | LED_RED | LED_YELLOW);  // Éteint toutes les LEDs
-    BIT_SET(PORTD, color_table[i % 7]);  // Allume la couleur suivante
-    ++i;
-}*/
-
-
-
-void wheel(uint8_t pos) {
-    pos = 255 - pos;
-    if (pos < 85) {
-        set_rgb(255 - pos * 3, 0, pos * 3);
-    } 
-    else if (pos < 170) {
-        pos = pos - 85;
-        set_rgb(0, pos * 3, 255 - pos * 3);
-    } 
-    else {
-        pos = pos - 170;
-        set_rgb(pos * 3, 255 - pos * 3, 0);
-    }
-}
-
 
 int main()
 {
-    uart_init();
     init_rgb();
-    _delay_ms(100);
+    uart_init();
     setup_led();
     uart_printstr("UART Ready!\r\n");
     while(1)
     {
-
+        UDR0 = 'A';
         read_input();
         _delay_ms(10);
     }

@@ -26,8 +26,6 @@ void uart_init()
     /*Enable receiver and transmitter */
     BIT_SET(UCSR0B, RXEN0);
     BIT_SET(UCSR0B, TXEN0);
-    /* Set frame format: 8data, 2stop bit */
-    UCSR0C = (1<<USBS0)|(3<<UCSZ00);
 }
 
 

@@ -21,8 +21,6 @@ void uart_init()
     BIT_SET(UCSR0B, RXEN0);
     BIT_SET(UCSR0B, TXEN0);
     BIT_SET(UCSR0B, RXCIE0); // enable interupt
-    /* Set frame format: 8data, 2stop bit */
-    UCSR0C = (1<<USBS0)|(3<<UCSZ00);
 }
 
 void uart_tx(unsigned char data)

@@ -21,7 +21,7 @@
 
 // TCCR0A COM0A1 COM0A0 COM0B1 COM0B0 – – WGM01 WGM00
 // TCCR0B FOC0A  FOC0B   – –   WGM02  CS02 CS01 CS00 
-void int_rgb()
+void init_rgb()
 {
     cli();
     CLKPR |= (1 << CLKPS3); // 256
@@ -87,7 +87,7 @@ void wheel(uint8_t pos) {
 int main()
 {
     setup_led();
-    setup_timer();
+    init_rgb();
     unsigned char i = 90;
     while(1)
     {

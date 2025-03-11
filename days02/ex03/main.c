@@ -12,7 +12,7 @@ must be cleared before each transmission (before UDRn is written) if it is used 
 #define BAUD 115200
 #define BIT_SET(reg, target) reg |= (1 << target)
 #define BIT_RESET(reg) reg = 0
-#define MYUBRR MYUBRR (F_CPU/ (16 * BAUD))
+#define MYUBRR  (F_CPU/ (16 * BAUD))
 
 void uart_init()
 {
@@ -25,9 +25,6 @@ void uart_init()
     BIT_SET(UCSR0B, RXEN0);
     BIT_SET(UCSR0B, TXEN0);
     BIT_SET(UCSR0B, RXCIE0); // enable interupt
-
-    /* Set frame format: 8data, 2stop bit */
-    UCSR0C = (1<<USBS0)|(3<<UCSZ00);
 }
 
 

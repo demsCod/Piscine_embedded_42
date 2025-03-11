@@ -60,7 +60,7 @@ int handle_input(char c)
     if (input_flag == 0)
     {
 
-        if (c == 127) // Touche backspace
+        if (c == 127 || c == '\b') // Touche backspace
         {
             if (i_us > 0)
             {
@@ -140,7 +140,14 @@ void handle_user()
         uart_printstr("DEMS42");
         uart_printstr(" Logged in\r\n");
         PORTB |= 23;
-        PORTB |= 1;
+        for(int i = 0; i < 8; i++)
+        {
+            _delay_ms(100);
+            PORTB ^= 23;
+            PORTD ^= (1 << PD3);
+
+        }
+        PORTB ^= 23;
         PORTD &= ~(1 << PD3);
         _delay_ms(50);
         PORTD |= (1 << PD6);
@@ -238,6 +245,7 @@ ISR(TIMER1_COMPA_vect)
 int main ()
 {
     DDRB |= 23;
+    DDRB |= (1 << PB0);
     DDRD |= (1 << PD6) | (1 << PD5) | (1 << PD3);
     PORTD |= (1 << PD3);
     uart_init();
