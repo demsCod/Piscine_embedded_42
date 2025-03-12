@@ -24,11 +24,10 @@
 void init_rgb()
 {
     cli();
-    CLKPR |= (1 << CLKPS3); // 256
+    CLKPR |= (1 << CLKPS3); // Prescaler  256
     TCCR0A |= (1 << WGM00) | (1 << WGM01);                 // Mode  Fast PWM
     TCCR2A |= (1 << WGM20) | (1 << WGM21);                 // Mode  Fast PWM
 
-    ///TCCR0B |= (1 << WGM02); // counting sequence OCRA
 
     //Clear OC0B on compare match, set OC0B at BOTTOM, (non-inverting mode)
     TCCR0A |= (1 << COM0B1) | (1 << COM0A1);    
@@ -37,7 +36,7 @@ void init_rgb()
     
 
     TCCR0B |= (1 << CS01) | (1 << CS00);   // Prescaler 64
-    TCCR2B |= (1 << CS22);  // Prescaler 64
+    TCCR2B |= (1 << CS22) | (1 << CS20);  // Prescaler 64
     //BIT_SET(TIMSK1, (1 << OCIE0B));        // Activation de l'interruption
     //OCR0B = 255;
     //OCR0A = 255;
@@ -63,8 +62,8 @@ void setup_led()
 
 void set_rgb(uint8_t r, uint8_t g, uint8_t b)
 {
-    OCR0A =r;
-   OCR0B = g;
+    OCR0A = g;
+   OCR0B = r;
    OCR2B = b;
 }
 
@@ -91,7 +90,7 @@ int main()
     unsigned char i = 90;
     while(1)
     {
-       _delay_ms(100);
+       _delay_ms(25);
        wheel(i);
        i--;
 
